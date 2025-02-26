@@ -28,7 +28,9 @@ class NeuralNetwork:
         for layer in range(1, self.layers):
             h_previous = h_current
             h_current = np.array([neuron.feedforward(h_previous) for neuron in self.neurons[layer]])
-        return h_current
+        
+        h_final_exp_sum = np.sum(np.exp(h_current))
+        return np.exp(h_current) / h_final_exp_sum
     
     def __repr__(self):
         return f'''NeuralNetwork(Layers = {self.layers}, Neurons per layer = {self.neurons_per_layer})'''
