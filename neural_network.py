@@ -25,12 +25,10 @@ class NeuralNetwork:
     def feedforward(self, x):
         x = np.array(x).reshape(-1,)
         h_current = np.array([neuron.feedforward(x) for neuron in self.neurons[0]])
-        print(f"Layer 0 output shape: {h_current.shape}")
         for layer in range(1, self.layers):
             h_previous = h_current
             h_current = np.array([neuron.feedforward(h_previous) for neuron in self.neurons[layer]])
-            print(f"Layer {layer} output shape: {h_current.shape}")
         return h_current
     
     def __repr__(self):
-        return f'''NeuralNetwork({self.layers}, {self.neurons_per_layer})'''
+        return f'''NeuralNetwork(Layers = {self.layers}, Neurons per layer = {self.neurons_per_layer})'''
