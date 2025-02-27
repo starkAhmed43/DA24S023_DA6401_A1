@@ -26,7 +26,9 @@ class Neuron:
         return activation_options[activation](a)
     
     def feedforward(self, x):
-        return self.activation(self.pre_activation(x))
+        a = self.pre_activation(x)
+        h = self.activation(a)
+        return (a, h)
     
     def __repr__(self):
         return f'Neuron({self.w.shape}, {self.b.shape})'

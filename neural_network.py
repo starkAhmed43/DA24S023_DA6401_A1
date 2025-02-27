@@ -24,13 +24,29 @@ class NeuralNetwork:
         
     def feedforward(self, x):
         x = np.array(x).reshape(-1,)
-        h_current = np.array([neuron.feedforward(x) for neuron in self.neurons[0]])
+        all_a_list, all_h_list = [], []
+        a_layerwise, h_layerwise = [], []
+
+        for neuron in self.neurons[0]:
+            a, h = neuron.feedforward(x)
+            a_layerwise.append(a)
+            h_layerwise.append(h)
+        all_a_list.append(np.array(a_layerwise))
+        all_h_list.append(np.array(h_layerwise))
+
         for layer in range(1, self.layers):
-            h_previous = h_current
-            h_current = np.array([neuron.feedforward(h_previous) for neuron in self.neurons[layer]])
+            a_layerwise, h_layerwise = [], []
+            for neuron in self.neurons[layer]:
+                a, h = neuron.feedforward(all_h_list[layer-1])
+                a_layerwise.append(a)
+                h_layerwise.append(h)
+            all_a_list.append(np.array(a_layerwise))
+            all_h_list.append(np.array(h_layerwise))
         
-        h_final_exp_sum = np.sum(np.exp(h_current))
-        return np.exp(h_current) / h_final_exp_sum
+        h_final = all_h_list[-1]
+        h_final_exp_sum = np.sum(np.exp(h_final))
+        y_hat = np.exp(h_final) / h_final_exp_sum
+        return all_a_list, all_h_list[:-1], y_hat
     
     def __repr__(self):
         return f'''NeuralNetwork(Layers = {self.layers}, Neurons per layer = {self.neurons_per_layer})'''
