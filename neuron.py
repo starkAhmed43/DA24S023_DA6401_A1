@@ -4,6 +4,8 @@ class Neuron:
     def __init__(self, w, b):
         self.w = np.array(w)
         self.b = np.array(b)
+        self.a = None
+        self.h = None
     
     def pre_activation(self, h):
         return np.dot(self.w, h) + self.b
@@ -26,9 +28,8 @@ class Neuron:
         return activation_options[activation](a)
     
     def feedforward(self, x):
-        a = self.pre_activation(x)
-        h = self.activation(a)
-        return (a, h)
+        self.a = self.pre_activation(x)
+        self.h = self.activation(self.a)
     
     def __repr__(self):
         return f'Neuron({self.w.shape}, {self.b.shape})'
