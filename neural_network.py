@@ -21,8 +21,19 @@ class NeuralNetwork:
                 for _ in range(neurons_per_layer[layer])]
             for layer in range(1, layers)},
         }
-        self.all_w_list, self.all_b_list = {layer: None for layer in range(1, layers)}, {layer: None for layer in range(1, layers)}
-        self.all_a_list, self.all_h_list = {layer: None for layer in range(layers)}, {layer: None for layer in range(layers)}
+        self.all_w_list, self.all_b_list = self.get_weights()
+        self.all_a_list, self.all_h_list = {}, {}
+
+    def get_weights(self):
+        all_w_list, all_b_list = {}, {}
+        for layer in range(1, self.layers):
+            w_layerwise, b_layerwise = [], []
+            for neuron in self.neurons[layer]:
+                w_layerwise.append(neuron.w)
+                b_layerwise.append(neuron.b)
+            all_w_list[layer] = np.array(w_layerwise)
+            all_b_list[layer] = np.array(b_layerwise)
+        return all_w_list, all_b_list
         
     def feedforward(self, x):
         x = np.array(x).reshape(-1,)
@@ -62,8 +73,7 @@ class NeuralNetwork:
 
     # backpropagation
     def backprop(self, all_w_list, all_b_list, y_hat, class_label):
-        all_delta_a_list, all_delta_h_list = {layer: None for layer in range(1, self.layers)}, {layer: None for layer in range(1, self.layers)}
-        all_delta_w_list, all_delta_b_list = {layer: None for layer in range(1, self.layers)}, {layer: None for layer in range(1, self.layers)}
+        all_delta_a_list, all_delta_h_list, all_delta_w_list, all_delta_b_list = {}, {}, {}, {}
         
 
         # gradient wrt to h
