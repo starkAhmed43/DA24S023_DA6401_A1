@@ -11,7 +11,10 @@ class Neuron:
         return np.dot(self.w, h) + self.b
     
     def sigmoid(self, pre_activated):
-        return 1 / (1 + np.exp(-pre_activated))
+        if pre_activated >= 0:
+            return 1 / (1 + np.exp(-pre_activated))
+        else:
+            return np.exp(pre_activated) / (1 + np.exp(pre_activated))
 
     def tanh(self, pre_activated):
         return np.tanh(pre_activated)
