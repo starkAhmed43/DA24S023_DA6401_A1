@@ -1,89 +1,68 @@
 import numpy as np
-from neuron import Neuron
+from layer import Layer
 
 class NeuralNetwork:
-    def __init__(self, layers, neurons_per_layer, activations):
-        self.layers = layers
-        self.neurons_per_layer = neurons_per_layer
-        self.activations = {0: None, **{i: activations[i-1] for i in range(1, layers)}}
+    def __init__(self, num_layers, neurons_per_layer, activations):
+        if len(neurons_per_layer) != num_layers + 1 or len(activations) != num_layers:
+            raise ValueError("Invalid configuration: Check number of layers, neurons, and activations.")
 
-        self.weights = {i: np.random.randn(neurons_per_layer[i], neurons_per_layer[i-1]) / np.sqrt(neurons_per_layer[i-1]) for i in range(1, layers)}
+        self.layers = []
+        for i in range(num_layers):
+            layer = Layer(neurons_per_layer[i], neurons_per_layer[i + 1], activations[i])
+            self.layers.append(layer)
 
-        self.biases = {i: np.zeros((neurons_per_layer[i], 1)) for i in range(1, layers)}
+    def forward(self, X):
+        output = X
+        for layer in self.layers:
+            output = layer.forward(output)
+        return output
+    
+    def backward(self, X, y_hat_probs, y_true_class):
+        X = X.reshape(1, -1)
+        y_true_one_hot = np.zeros_like(y_hat_probs)
+        y_true_one_hot[0, y_true_class] = 1
+        
+        # gradients wrt output layer
+        dA_L = y_hat_probs - y_true_one_hot
+        
+        all_delta_W = [np.dot(self.layers[-2].h.T, dA_L)]
+        all_delta_b = [np.sum(dA_L, axis=0, keepdims=True)]
+        
+        ### find the gradient of loss wrt to activations of the last hidden layer
+        ### and then use it to find the gradients wrt to weights and biases of all layers
+        dH_minus = np.dot(dA_L, self.layers[-1].weights.T)
 
-    def activation_fn(self, a, activation):
-        if activation == 'sigmoid':
-            return np.where(
-                a >= 0,
-                1 / (1 + np.exp(-a)),
-                np.exp(a) / (1 + np.exp(a))
-            )
-        elif activation == 'tanh':
-            return np.tanh(a)
-        elif activation == 'relu':
-            return np.maximum(0, a)
-        elif activation == 'softmax':
-            h = np.exp(a - np.max(a))
-            return h / np.sum(h, axis=0, keepdims=True)
-        return a
 
-    def activation_fn_prime(self, a, activation):
-        h = self.activation_fn(a, activation)
-        if activation == 'sigmoid':
-            return h * (1 - h)
-        elif activation == 'tanh':
-            return 1 - h**2
-        elif activation == 'relu':
-            return (h > 0).astype(float)
-        else:
-            return np.ones_like(a)
+        # gradient wrt hidden layers EXCEPT THE FIRST HIDDEN LAYER
+        for l_idx in range(len(self.layers) - 2, 0, -1):
+            layer = self.layers[l_idx]
+            prev_layer = self.layers[l_idx - 1]
+            
+            ### the dH_minus being passed to layer.backward() is from the previous iteration
+            ### so in the current iteration, it is the dH of the current layer
+            
+            ### h_minus being passed to layer.backward() in the current iteration refers to the h of the previous layer
+            ### i.e if the current iteration is for the 4th layer, we send in the activations of the 3rd layer
+            dW, db, dH_minus = layer.backward(dH=dH_minus, h_minus=prev_layer.h)
+
+            ### layer.backward() will then return the dW and db for the current layer and the dH for the previous layer
+            ### i.e if the current iteration is for the 4th layer, we get the dW and db for the 4th layer and the dH for the 3rd layer
+
+            all_delta_W.insert(0, dW)
+            all_delta_b.insert(0, db)
         
 
-    def feedforward(self, x):
-        h = np.array(x).reshape(-1, 1)
-        self.activations_cache = {0: h}
-        self.pre_activation_cache = {0: np.array(None)}
+        # gradient wrt first hidden layer
 
-        for i in range(1, self.layers):
-            a = self.weights[i] @ h + self.biases[i]
-            h = self.activation_fn(a, self.activations[i])
-
-            self.pre_activation_cache[i] = a
-            self.activations_cache[i] = h
-        return h
+        ### here dH_minus is the one returned by the backward() of the 2nd hidden layer
+        ### thus, it is the very own dH of the first hidden layer
+        ### and h_minus is the input X since there are no previous layers
+        dW_0, db_0, _ = self.layers[0].backward(dH=dH_minus, h_minus=X)
+        
+        all_delta_W.insert(0, dW_0)
+        all_delta_b.insert(0, db_0)
+        return all_delta_W, all_delta_b
     
     def __repr__(self):
-        return f'''NeuralNetwork(
-            Layers: {self.layers}, 
-            Neurons per layer: {self.neurons_per_layer}, 
-            Activations: {self.activations},
-            Weights shape: { {k: v.shape for k, v in self.weights.items()} }, 
-            Biases shape: { {k: v.shape for k, v in self.biases.items()} },
-            Pre-activations shape: { {k: v.shape for k, v in self.pre_activation_cache.items()} }, 
-            Activations shape: { {k: v.shape for k, v in self.activations_cache.items()} }
-        )'''
-    
-    def backprop(self, y_hat, y_class_label):
-        y_true = np.zeros_like(y_hat)
-        y_true[y_class_label] = 1
-
-        delta_W = {i: np.zeros_like(self.weights[i]) for i in range(1, self.layers)}
-        delta_b = {i: np.zeros_like(self.biases[i]) for i in range(1, self.layers)}
-
-        dL_dh = np.array(None)
-        dL_da = y_hat - y_true
-
-        for i in range(self.layers-1, 0, -1):
-            print(f'Layer {i}')
-
-            print(f'delta_W[{i}] shape: {delta_W[i].shape}')
-            del_W = dL_da @ self.activations_cache[i-1].T
-            print(del_W)
-            delta_W[i] = dL_da @ self.activations_cache[i-1].T
-            delta_b[i] = dL_da
-
-            if i > 1:
-                dL_dh = self.weights[i].T @ dL_da
-                dL_da = dL_dh * self.activation_fn_prime(self.pre_activation_cache[i-1], self.activations[i-1])
-        
-        return delta_W, delta_b, dL_da, dL_dh
+        layers_repr = "\n".join([f"Layer {i}:\n {layer}" for i, layer in enumerate(self.layers)])
+        return f"""Neural Network: \nNo. of Layers: {len(self.layers)} \nLayers: \n{layers_repr}"""
