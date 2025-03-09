@@ -141,6 +141,7 @@ class OptimizerFactory:
     OPTIMIZERS = {
         "sgd": (SGDOptimizer, ["learning_rate", "weight_decay"]),
         "momentum": (MomentumGDOptimizer, ["learning_rate", "momentum", "weight_decay"]),
+        "nesterov": (NAGOptimizer, ["learning_rate", "momentum", "weight_decay"]),
         "rmsprop": (RMSPropOptimizer, ["learning_rate", "beta", "epsilon", "weight_decay"]),
         "adam": (AdamOptimizer, ["learning_rate", "beta1", "beta2", "epsilon", "weight_decay"]),
         "nadam": (NadamOptimizer, ["learning_rate", "beta1", "beta2", "epsilon", "weight_decay"]),

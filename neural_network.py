@@ -2,7 +2,7 @@ import numpy as np
 from layer import Layer
 
 class NeuralNetwork:
-    def __init__(self, num_layers, neurons_per_layer, activations, init_method='random'):
+    def __init__(self, num_layers, neurons_per_layer, activations, init_method='random', weight_decay=0.0):
         if len(neurons_per_layer) != num_layers + 1:
             raise ValueError("Invalid configuration: num_layers and neurons_per_layer mismatch")
         if len(activations) != num_layers:
@@ -14,6 +14,7 @@ class NeuralNetwork:
         for i in range(num_layers):
             layer = Layer(neurons_per_layer[i], neurons_per_layer[i + 1], activations[i], init_method)
             self.layers.append(layer)
+        self.weight_decay = weight_decay
 
     def forward(self, X):
         output = X
@@ -22,14 +23,15 @@ class NeuralNetwork:
         return output
     
     def backward(self, X, y_hat_probs, y_true_class):
+        m = y_hat_probs.shape[0]
         y_true_one_hot = np.zeros_like(y_hat_probs)
         y_true_one_hot[0, y_true_class] = 1
         
         # gradients wrt output layer
         dA_L = y_hat_probs - y_true_one_hot
         
-        all_delta_W = [np.dot(self.layers[-2].h.T, dA_L)]
-        all_delta_b = [np.sum(dA_L, axis=0, keepdims=True)]
+        all_delta_W = [np.dot(self.layers[-2].h.T, dA_L) * (1 + self.weight_decay) / m]
+        all_delta_b = [np.sum(dA_L, axis=0, keepdims=True) / m]
         
         ### find the gradient of loss wrt to activations of the last hidden layer
         ### and then use it to find the gradients wrt to weights and biases of all layers
@@ -51,8 +53,8 @@ class NeuralNetwork:
             ### layer.backward() will then return the dW and db for the current layer and the dH for the previous layer
             ### i.e if the current iteration is for the 4th layer, we get the dW and db for the 4th layer and the dH for the 3rd layer
 
-            all_delta_W.insert(0, dW)
-            all_delta_b.insert(0, db)
+            all_delta_W.insert(0, dW * (1 + self.weight_decay) / m)
+            all_delta_b.insert(0, db / m)
         
 
         # gradient wrt first hidden layer
@@ -62,8 +64,8 @@ class NeuralNetwork:
         ### and h_minus is the input X since there are no previous layers
         dW_0, db_0, _ = self.layers[0].backward(dH=dH_minus, h_minus=X)
         
-        all_delta_W.insert(0, dW_0)
-        all_delta_b.insert(0, db_0)
+        all_delta_W.insert(0, dW_0 * (1 + self.weight_decay) / m)
+        all_delta_b.insert(0, db_0 / m)
         return all_delta_W, all_delta_b
     
     def __repr__(self):
