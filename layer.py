@@ -1,8 +1,13 @@
 import numpy as np
 
 class Layer:
-    def __init__(self, input_size, output_size, activation):
-        self.weights = np.random.randn(input_size, output_size) * np.sqrt(2 / input_size)
+    def __init__(self, input_size, output_size, activation, init_method='xavier'):
+        if init_method == 'random':
+            self.weights = np.random.randn(input_size, output_size) * 0.1  # Scale to limit to single digits
+        elif init_method == 'xavier':
+            self.weights = np.random.randn(input_size, output_size) * np.sqrt(1 / input_size)
+        else:
+            raise ValueError(f'Initialization method {init_method} not supported')
         self.biases = np.zeros((1, output_size))
         self.activation = activation
 
@@ -19,14 +24,13 @@ class Layer:
             return np.maximum(0, a)
         elif self.activation == 'softmax':
             h = np.exp(a - np.max(a))
-            return h / np.sum(h, axis=1, keepdims=True)
+            return h / (np.sum(h, axis=1, keepdims=True) + 1e-8)
         elif self.activation == 'linear':
             return a
         else: 
             raise ValueError(f'Activation function {self.activation} not supported')
     
     def forward(self, X):
-        X = X.reshape(1, -1)
         self.a = np.dot(X, self.weights) + self.biases
         self.h = self.activation_fn(self.a)
         return self.h

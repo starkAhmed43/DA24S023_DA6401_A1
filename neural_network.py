@@ -2,13 +2,17 @@ import numpy as np
 from layer import Layer
 
 class NeuralNetwork:
-    def __init__(self, num_layers, neurons_per_layer, activations):
-        if len(neurons_per_layer) != num_layers + 1 or len(activations) != num_layers:
-            raise ValueError("Invalid configuration: Check number of layers, neurons, and activations.")
+    def __init__(self, num_layers, neurons_per_layer, activations, init_method='random'):
+        if len(neurons_per_layer) != num_layers + 1:
+            raise ValueError("Invalid configuration: num_layers and neurons_per_layer mismatch")
+        if len(activations) != num_layers:
+            raise ValueError("Invalid configuration: num_layers and activations mismatch")
+        if init_method not in ['random', 'xavier']:
+            raise ValueError("Invalid configuration: init_method")
 
         self.layers = []
         for i in range(num_layers):
-            layer = Layer(neurons_per_layer[i], neurons_per_layer[i + 1], activations[i])
+            layer = Layer(neurons_per_layer[i], neurons_per_layer[i + 1], activations[i], init_method)
             self.layers.append(layer)
 
     def forward(self, X):
@@ -18,7 +22,6 @@ class NeuralNetwork:
         return output
     
     def backward(self, X, y_hat_probs, y_true_class):
-        X = X.reshape(1, -1)
         y_true_one_hot = np.zeros_like(y_hat_probs)
         y_true_one_hot[0, y_true_class] = 1
         
