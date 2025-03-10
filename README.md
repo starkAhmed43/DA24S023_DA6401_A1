@@ -126,3 +126,6 @@ python train.py -wp my_project -we my_entity -d fashion_mnist -e 100 -b 32 -l cr
 ## Logging
 
 The project uses Weights & Biases (wandb) for logging. Logs can be found in the `wandb/` directory.
+
+## Self Declaration
+I, Adhil Ahmed P M Shums (DA24S023), swear on my honour that I have written the code and the report by myself and have not copied it from the internet or other students.
