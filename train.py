@@ -3,9 +3,9 @@ import argparse
 import numpy as np
 import optimizer as opt
 from tqdm.auto import tqdm
-from keras.datasets import fashion_mnist
-from neural_network import NeuralNetwork
 from optimizer import OptimizerFactory
+from neural_network import NeuralNetwork
+from keras.datasets import fashion_mnist, mnist
 
 sweep_config = {
     "method": "bayes",  # Bayesian Optimization
@@ -120,10 +120,10 @@ if __name__ == "__main__":
         if value:
             sweep_config["parameters"][param]["values"] = [value]
 
-    (X_train, y_train), (X_test, y_test) = fashion_mnist.load_data()
+    (X_train, y_train), (X_test, y_test) = fashion_mnist.load_data() if args.dataset == "fashion_mnist" else mnist.load_data()
     X_train, X_test = X_train.reshape(X_train.shape[0], -1), X_test.reshape(X_test.shape[0], -1)
-    X_train, X_val = X_train[:-6000], X_train[-6000:]
-    y_train, y_val = y_train[:-6000], y_train[-6000:]
+    X_train, X_val = X_train[:X_train.shape[0]//10], X_train[X_train.shape[0]//10:]
+    y_train, y_val = y_train[:y_train.shape[0]//10], y_train[y_train.shape[0]//10:]
 
     X_train, X_val, X_test = X_train / 255.0, X_val / 255.0, X_test / 255.0
     
