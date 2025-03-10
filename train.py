@@ -1,6 +1,7 @@
 import wandb
 import argparse
 import numpy as np
+import optimizer as opt
 from tqdm.auto import tqdm
 from keras.datasets import fashion_mnist
 from neural_network import NeuralNetwork
@@ -40,7 +41,10 @@ def train(model, X_train, y_train, X_val, y_val, optimizer, epochs=1000):
         train_accuracy = np.mean(np.argmax(train_probs, axis=1) == y_train)
 
         grad_W, grad_b = model.backward(X_train, train_probs, y_train)
-        optimizer.update(grad_W, grad_b)
+        if isinstance(optimizer, opt.NAGOptimizer):
+            optimizer.update(X_train, y_train)
+        else:
+            optimizer.update(grad_W, grad_b)
 
         val_probs = model.forward(X_val)
         val_loss = cross_entropy_loss(val_probs, y_val)

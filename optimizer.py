@@ -45,17 +45,23 @@ class NAGOptimizer:
         self.velocities_W = [np.zeros_like(layer.weights) for layer in model.layers]
         self.velocities_b = [np.zeros_like(layer.biases) for layer in model.layers]
 
-    def update(self, gradients_W, gradients_b):
+    def update(self, X, y_true_class):
+        # Lookahead Step: Temporarily move weights in the direction of momentum
         for i, layer in enumerate(self.model.layers):
-            lookahead_W = layer.weights - self.momentum * self.velocities_W[i]
-            grad_W = gradients_W[i] + self.weight_decay * lookahead_W
+            layer.weights += self.momentum * self.velocities_W[i]
+            layer.biases += self.momentum * self.velocities_b[i]
 
-            self.velocities_W[i] = (self.momentum * self.velocities_W[i]) + (self.learning_rate * grad_W)
-            self.velocities_b[i] = (self.momentum * self.velocities_b[i]) + (self.learning_rate * gradients_b[i])
+        # Compute gradients at lookahead position
+        y_hat_probs = self.model.forward(X)  # Forward pass at lookahead position
+        gradients_W, gradients_b = self.model.backward(X, y_hat_probs, y_true_class)
+
+        for i, layer in enumerate(self.model.layers):
+            self.velocities_W[i] = self.momentum * self.velocities_W[i] + self.learning_rate * gradients_W[i]
+            self.velocities_b[i] = self.momentum * self.velocities_b[i] + self.learning_rate * gradients_b[i]
 
             layer.weights -= self.velocities_W[i]
             layer.biases -= self.velocities_b[i]
-    
+
     def __repr__(self):
         return f"NAG Optimizer - Learning Rate: {self.learning_rate} - Momentum: {self.momentum}"
 
