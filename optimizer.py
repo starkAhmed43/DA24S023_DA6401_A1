@@ -10,6 +10,9 @@ class SGDOptimizer:
         for i, layer in enumerate(self.model.layers):
             layer.weights -= self.learning_rate * gradients_W[i]
             layer.biases -= self.learning_rate * gradients_b[i]
+    
+    def __repr__(self):
+        return f"SGD Optimizer - Learning Rate: {self.learning_rate}"
 
 
 class MomentumGDOptimizer:
@@ -28,14 +31,16 @@ class MomentumGDOptimizer:
 
             layer.weights -= (self.learning_rate * self.velocities_W[i])
             layer.biases -= (self.learning_rate * self.velocities_b[i])
+    
+    def __repr__(self):
+        return f"MomentumGD Optimizer - Learning Rate: {self.learning_rate} - Momentum: {self.momentum}"
 
 
 class NAGOptimizer:
-    def __init__(self, model, learning_rate=0.01, momentum=0.9, weight_decay=0.0):
+    def __init__(self, model, learning_rate=0.01, momentum=0.9):
         self.model = model
         self.learning_rate = learning_rate
         self.momentum = momentum
-        self.weight_decay = weight_decay
 
         self.velocities_W = [np.zeros_like(layer.weights) for layer in model.layers]
         self.velocities_b = [np.zeros_like(layer.biases) for layer in model.layers]
@@ -50,6 +55,9 @@ class NAGOptimizer:
 
             layer.weights -= self.velocities_W[i]
             layer.biases -= self.velocities_b[i]
+    
+    def __repr__(self):
+        return f"NAG Optimizer - Learning Rate: {self.learning_rate} - Momentum: {self.momentum}"
 
 
 class RMSPropOptimizer:
@@ -69,6 +77,9 @@ class RMSPropOptimizer:
 
             layer.weights -= self.learning_rate * gradients_W[i] / (np.sqrt(self.sq_grads_W[i]) + self.epsilon)
             layer.biases -= self.learning_rate * gradients_b[i] / (np.sqrt(self.sq_grads_b[i]) + self.epsilon)
+
+    def __repr__(self):
+        return f"RMSProp Optimizer - Learning Rate: {self.learning_rate} - Beta: {self.beta} - Epsilon: {self.epsilon}"
 
 
 class AdamOptimizer:
@@ -101,6 +112,9 @@ class AdamOptimizer:
 
             layer.weights -= self.learning_rate * m_W_hat / (np.sqrt(v_W_hat) + self.epsilon)
             layer.biases -= self.learning_rate * m_b_hat / (np.sqrt(v_b_hat) + self.epsilon)
+    
+    def __repr__(self):
+        return f"Adam Optimizer - Learning Rate: {self.learning_rate} - Beta1: {self.beta1} - Beta2: {self.beta2} - Epsilon: {self.epsilon}"
 
 
 class NadamOptimizer:
@@ -136,6 +150,9 @@ class NadamOptimizer:
 
             layer.weights -= self.learning_rate * m_W_nadam / (np.sqrt(v_W_hat) + self.epsilon)
             layer.biases -= self.learning_rate * m_b_nadam / (np.sqrt(v_b_hat) + self.epsilon)
+    
+    def __repr__(self):
+        return f"Nadam Optimizer - Learning Rate: {self.learning_rate} - Beta1: {self.beta1} - Beta2: {self.beta2} - Epsilon: {self.epsilon}"
 
 class OptimizerFactory:
     OPTIMIZERS = {
