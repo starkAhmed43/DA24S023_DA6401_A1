@@ -6,11 +6,13 @@ from dataloader import load_data
 from optimizers import OptimizerFactory
 from neural_network import NeuralNetwork
 
+np.random.seed(42)
+
 sweep_config = {
     "method": "bayes",  # Bayesian Optimization
     "metric": {"name": "val_accuracy", "goal": "maximize"},
     "parameters": {
-        "epochs": {"values": [50, 100]},
+        "epochs": {"values": [5, 10]},
         "num_hidden_layers": {"values": [3, 4, 5]},
         "hidden_layer_size": {"values": [32, 64, 128]},
         "weight_decay": {"values": [0, 0.0005, 0.5]},
@@ -26,18 +28,39 @@ sweep_config = {
     }
 }
 
-def train(model, X_train, y_train, X_val, y_val, optimizer, epochs=25):
+def train(model, X_train, y_train, X_val, y_val, optimizer, epochs, batch_size):
     loss_fn = model.loss_fn.loss
+    num_samples = X_train.shape[0]
+    num_batches = num_samples // batch_size
+
     for epoch in tqdm(range(epochs), desc="Training Progress", unit="epoch"):
+        # Shuffle the training data at the beginning of each epoch
+        indices = np.arange(num_samples)
+        np.random.shuffle(indices)
+        X_train = X_train[indices]
+        y_train = y_train[indices]
 
-        # Forward pass
-        train_probs = model.forward(X_train)
-        train_loss = loss_fn(y_train, train_probs)
-        train_accuracy = np.mean(np.argmax(train_probs, axis=1) == np.argmax(y_train, axis=1))
+        train_loss, train_accuracy = [], []
+        for batch in range(num_batches):
+            start = batch * batch_size
+            end = start + batch_size
+            X_batch = X_train[start:end]
+            y_batch = y_train[start:end]
 
-        # Backward pass and update
-        grad_W, grad_b = model.backward(y_train)
-        optimizer.update(grad_W, grad_b)
+            # Forward pass
+            train_probs = model.forward(X_batch)
+            train_loss.append(loss_fn(y_batch, train_probs))
+            train_accuracy.append(np.mean(np.argmax(train_probs, axis=1) == np.argmax(y_batch, axis=1)))
+
+            # Backward pass and update
+            grad_W, grad_b = model.backward(y_batch)
+
+            # Weight decay - L2 regularization
+            grad_W = [grad + (model.weight_decay * model.weights[i]) for i, grad in enumerate(grad_W)]
+            optimizer.update(grad_W, grad_b)
+
+        train_loss = np.mean(train_loss)
+        train_accuracy = np.mean(train_accuracy)
 
         # Validation
         val_probs = model.forward(X_val)
@@ -46,8 +69,8 @@ def train(model, X_train, y_train, X_val, y_val, optimizer, epochs=25):
 
         wandb.log({
             "epoch": epoch + 1,
-            "train_loss": train_loss,
-            "train_accuracy": train_accuracy,
+            "loss": train_loss,
+            "accuracy": train_accuracy,
             "val_loss": val_loss,
             "val_accuracy": val_accuracy
         })
@@ -65,9 +88,12 @@ def hparam_search():
     )
 
     epochs = config["epochs"]
+    batch_size = config["batch_size"]
+
     num_layers = config["num_hidden_layers"] + 1
     hidden_layer_size = config["hidden_layer_size"]
     layer_dims = [X_train.shape[1]] + [hidden_layer_size] * (num_layers - 1) + [10]
+
     activation = config["activation"]  
     weight_init = config["weight_init"]
 
@@ -82,7 +108,7 @@ def hparam_search():
         epsilon=config.get("epsilon", 1e-8)
     )
 
-    train(nn, X_train, y_train, X_val, y_val, optimizer, epochs)
+    train(nn, X_train, y_train, X_val, y_val, optimizer, epochs, batch_size)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Train a neural network with hyperparameter optimization using wandb.")
@@ -90,7 +116,7 @@ if __name__ == "__main__":
     parser.add_argument("-we", "--wandb_entity", help="Wandb Entity used to track experiments in the Weights & Biases dashboard.")
     parser.add_argument("-d", "--dataset", default="fashion_mnist", choices=["mnist", "fashion_mnist"], help="Dataset to use")
     parser.add_argument("-e", "--epochs", type=int, default=None, help="Number of epochs to train neural network.")
-    parser.add_argument("-b", "--batch_size", type=int, default=4, help="Batch size used to train neural network.")
+    parser.add_argument("-b", "--batch_size", type=int, default=None, help="Batch size used to train neural network.")
     parser.add_argument("-l", "--loss", default="cross_entropy", choices=["mean_squared_error", "cross_entropy"], help="Loss function to use")
     parser.add_argument("-o", "--optimizer", default=None, choices=["sgd", "momentum", "nesterov", "rmsprop", "adam", "nadam"], help="Optimizer to use")
     parser.add_argument("-lr", "--learning_rate", type=float, default=None, help="Learning rate used to optimize model parameters")
