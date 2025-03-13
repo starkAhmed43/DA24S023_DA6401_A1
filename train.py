@@ -17,6 +17,7 @@ sweep_config = {
         "hidden_layer_size": {"values": [32, 64, 128]},
         "weight_decay": {"values": [0, 0.0005, 0.5]},
         "learning_rate": {"values": [1e-3, 1e-4]},
+        "loss": {"values": ["cross_entropy", "mean_squared_error"]},
         "beta1": {"values": [0.9, 0.99]},
         "beta2": {"values": [0.999, 0.9999]},
         "momentum": {"values": [0.9, 0.99]},
@@ -84,7 +85,7 @@ def hparam_search():
     wandb.run.name = (
         f"ep_{config['epochs']}_hl_{config['num_hidden_layers']}_hs_{config['hidden_layer_size']}_"
         f"wd_{config['weight_decay']}_lr_{config['learning_rate']}_opt_{config['optimizer']}_"
-        f"bs_{config['batch_size']}_wi_{config['weight_init']}_act_{config['activation']}"
+        f"bs_{config['batch_size']}_wi_{config['weight_init']}_act_{config['activation']}_loss_{config['loss']}"
     )
 
     epochs = config["epochs"]
@@ -96,8 +97,13 @@ def hparam_search():
 
     activation = config["activation"]  
     weight_init = config["weight_init"]
+    loss = config["loss"]
 
-    nn = NeuralNetwork(num_layers, layer_dims, activation, weight_init)
+    nn = NeuralNetwork(num_layers=num_layers, 
+                       neurons_per_layer=layer_dims, 
+                       activation=activation, 
+                       loss=loss, 
+                       weight_init=weight_init)
 
     optimizer = OptimizerFactory.get_optimizer(
         config["optimizer"], nn, 
@@ -135,9 +141,7 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    params = ["epochs", "num_hidden_layers", "hidden_layer_size", "weight_decay", 
-              "learning_rate", "beta1", "beta2", "momentum", "epsilon", 
-              "optimizer", "batch_size", "weight_init", "activation"]
+    params = sweep_config["parameters"].keys()
 
     for param in params:
         value = getattr(args, param)
