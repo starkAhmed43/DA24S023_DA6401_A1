@@ -1,12 +1,16 @@
 import wandb
 import argparse
+import matplotlib
 import numpy as np
 from tqdm.auto import tqdm
+import matplotlib.pyplot as plt
 from dataloader import load_data
 from optimizers import OptimizerFactory
 from neural_network import NeuralNetwork
 
 np.random.seed(42)
+matplotlib.use("Agg")
+global_step = 0
 
 sweep_config = {
     "method": "bayes",  # Bayesian Optimization
@@ -29,7 +33,39 @@ sweep_config = {
     }
 }
 
+def log_class_samples(X, y, dataset_name):
+    global global_step
+    class_labels = {
+        "mnist": [str(i) for i in range(10)],  # Digits 0-9
+        "fashion_mnist": ["T-shirt", "Trouser", "Pullover", "Dress", "Coat", 
+                          "Sandal", "Shirt", "Sneaker", "Bag", "Ankle boot"]
+    }
+
+    class_names = class_labels.get(dataset_name, [str(i) for i in range(10)])
+    unique_classes = np.unique(np.argmax(y, axis=1))
+
+    fig, axes = plt.subplots(2, 5, figsize=(12, 6))
+    axes = axes.flatten()
+
+    images = []
+    for i, cls in enumerate(unique_classes):
+        idx = np.where(np.argmax(y, axis=1) == cls)[0][0]
+        img = X[idx].reshape(28, 28)
+        axes[i].imshow(img, cmap="gray")
+        axes[i].axis("off")
+        axes[i].set_title(class_names[cls])
+        images.append(wandb.Image(img, caption=class_names[cls]))
+
+    for j in range(len(unique_classes), len(axes)):
+        axes[j].axis("off")
+
+    plt.tight_layout()
+    wandb.log({"Sample Images per Class": wandb.Image(fig)}, step=global_step)
+    plt.close(fig)
+
 def train(model, X_train, y_train, X_val, y_val, optimizer, epochs, batch_size):
+    global global_step
+
     loss_fn = model.loss_fn.loss
     num_samples = X_train.shape[0]
     num_batches = num_samples // batch_size
@@ -74,12 +110,13 @@ def train(model, X_train, y_train, X_val, y_val, optimizer, epochs, batch_size):
             "accuracy": train_accuracy,
             "val_loss": val_loss,
             "val_accuracy": val_accuracy
-        })
+        }, step=global_step)
+        global_step += 1
 
         tqdm.write(f"Epoch {epoch + 1}/{epochs} - Loss: {train_loss:.4f} - Accuracy: {train_accuracy:.4f} - Val Loss: {val_loss:.4f} - Val Accuracy: {val_accuracy:.4f}")
 
 
-def hparam_search():
+def hparam_search(X_train, y_train, X_val, y_val):
     wandb.init()
     config = wandb.config
     wandb.run.name = (
@@ -114,6 +151,7 @@ def hparam_search():
         epsilon=config.get("epsilon", 1e-8)
     )
 
+    log_class_samples(X_train, y_train, args.dataset)
     train(nn, X_train, y_train, X_val, y_val, optimizer, epochs, batch_size)
 
 if __name__ == "__main__":
@@ -158,4 +196,4 @@ if __name__ == "__main__":
     
     sweep_id = wandb.sweep(sweep_config, **sweep_kwargs)
 
-    wandb.agent(sweep_id, function=hparam_search, count=args.count)
+    wandb.agent(sweep_id, function=lambda: hparam_search(X_train, y_train, X_val, y_val), count=args.count)
