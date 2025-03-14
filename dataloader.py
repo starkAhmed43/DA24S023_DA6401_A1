@@ -1,7 +1,6 @@
-import numpy as np
 from keras.datasets import fashion_mnist, mnist
-from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import OneHotEncoder
+from sklearn.model_selection import train_test_split
 
 def load_data(dataset='fashion_mnist'):
     if dataset == 'fashion_mnist':
