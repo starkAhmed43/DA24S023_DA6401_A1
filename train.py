@@ -1,15 +1,12 @@
 import wandb
 import argparse
-import matplotlib
 import numpy as np
 from tqdm.auto import tqdm
-import matplotlib.pyplot as plt
 from dataloader import load_data
 from optimizers import OptimizerFactory
 from neural_network import NeuralNetwork
 
 np.random.seed(42)
-matplotlib.use("Agg")
 global_step = 0
 
 sweep_config = {
@@ -42,26 +39,16 @@ def log_class_samples(X, y, dataset_name):
     }
 
     class_names = class_labels.get(dataset_name, [str(i) for i in range(10)])
-    unique_classes = np.unique(np.argmax(y, axis=1))
+    unique_classes = np.unique(np.argmax(y, axis=1))  # Get unique class indices
 
-    fig, axes = plt.subplots(2, 5, figsize=(12, 6))
-    axes = axes.flatten()
+    for cls in unique_classes:
+        idx = np.where(np.argmax(y, axis=1) == cls)[0][0]  # Get first index of class
+        img = X[idx].reshape(28, 28)  # Reshape assuming 28x28 image
 
-    images = []
-    for i, cls in enumerate(unique_classes):
-        idx = np.where(np.argmax(y, axis=1) == cls)[0][0]
-        img = X[idx].reshape(28, 28)
-        axes[i].imshow(img, cmap="gray")
-        axes[i].axis("off")
-        axes[i].set_title(class_names[cls])
-        images.append(wandb.Image(img, caption=class_names[cls]))
-
-    for j in range(len(unique_classes), len(axes)):
-        axes[j].axis("off")
-
-    plt.tight_layout()
-    wandb.log({"Sample Images per Class": wandb.Image(fig)}, step=global_step)
-    plt.close(fig)
+        # Log each image separately to W&B
+        wandb.log({
+            f"Class {class_names[cls]}": wandb.Image(img, caption=class_names[cls])
+        }, step=global_step)
 
 def train(model, X_train, y_train, X_val, y_val, optimizer, epochs, batch_size):
     global global_step
