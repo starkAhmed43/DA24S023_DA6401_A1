@@ -154,12 +154,12 @@ class NadamOptimizer(AdamOptimizer):
 
 class OptimizerFactory:
     OPTIMIZERS = {
-        "sgd": (SGDOptimizer, ["learning_rate", "weight_decay"]),
-        "momentum": (MomentumGDOptimizer, ["learning_rate", "momentum", "weight_decay"]),
-        "nesterov": (NAGOptimizer, ["learning_rate", "momentum", "weight_decay"]),
-        "rmsprop": (RMSPropOptimizer, ["learning_rate", "beta1", "epsilon", "weight_decay"]),
-        "adam": (AdamOptimizer, ["learning_rate", "beta1", "beta2", "epsilon", "weight_decay"]),
-        "nadam": (NadamOptimizer, ["learning_rate", "beta1", "beta2", "epsilon", "weight_decay"]),
+        "sgd": (SGDOptimizer, ["learning_rate"]),
+        "momentum": (MomentumGDOptimizer, ["learning_rate", "momentum"]),
+        "nesterov": (NAGOptimizer, ["learning_rate", "momentum"]),
+        "rmsprop": (RMSPropOptimizer, ["learning_rate", "beta1", "epsilon"]),
+        "adam": (AdamOptimizer, ["learning_rate", "beta1", "beta2", "epsilon"]),
+        "nadam": (NadamOptimizer, ["learning_rate", "beta1", "beta2", "epsilon"]),
     }
 
     @staticmethod

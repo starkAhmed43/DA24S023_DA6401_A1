@@ -7,23 +7,18 @@ np.random.seed(42)
 class NeuralNetwork:    
     def __init__(self, 
                  num_layers, neurons_per_layer, 
-                 activation="relu", weight_init="xavier", loss="cross_entropy",
-                 learning_rate=0.001, weight_decay=0.0, batch_size=1):
+                 activation="relu", weight_init="xavier", 
+                 loss="cross_entropy", weight_decay=0.0, batch_size=1):
         if len(neurons_per_layer) != num_layers + 1:
             raise ValueError("Invalid configuration: num_layers and neurons_per_layer mismatch")
 
         self.num_layers = num_layers
         self.neurons_per_layer = neurons_per_layer
-
         self.activation_fn = ActivationFnFactory.get(activation)
         self.loss_fn = LossFnFactory.get(loss)
-
-        self.learning_rate = learning_rate
         self.weight_decay = weight_decay
         self.batch_size = batch_size
-
         self.weights, self.biases = self.init_params(weight_init, neurons_per_layer)
-        
 
     def init_params(self, init_method, neurons_per_layer):
         weights, biases = [], []
