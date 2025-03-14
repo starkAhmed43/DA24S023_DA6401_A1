@@ -47,7 +47,10 @@ class NeuralNetwork:
             self.pre_activations.append(a)
 
             if i == self.num_layers - 1:
-                h = ActivationFnFactory.get("softmax").activation(a)
+                if self.loss_fn.__class__.__name__ == "CrossEntropyLoss":
+                    h = ActivationFnFactory.get("softmax").activation(a)
+                else:
+                    h = ActivationFnFactory.get("identity").activation(a)
             else:
                 h = self.activation_fn.activation(a)
             self.activations.append(h)
