@@ -7,10 +7,9 @@ from optimizers import OptimizerFactory
 from neural_network import NeuralNetwork
 
 np.random.seed(42)
-class_labels = ["T-shirt", "Trouser", "Pullover", "Dress", "Coat", "Sandal", "Shirt", "Sneaker", "Bag", "Ankle Boot"]
 
 sweep_config = {
-    "method": "bayes",  # Bayesian Optimization
+    "method": "bayes",
     "metric": {"name": "val_accuracy", "goal": "maximize"},
     "parameters": {
         "epochs": {"values": [5, 10]},
@@ -30,33 +29,12 @@ sweep_config = {
     }
 }
 
-def log_class_samples(X, y, dataset_name):
-    class_labels_dict = {
-        "mnist": [str(i) for i in range(10)],  # Digits 0-9
-        "fashion_mnist": class_labels
-    }
-
-    class_names = class_labels_dict[dataset_name]
-    unique_classes = np.unique(np.argmax(y, axis=1))  # Get unique class indices
-
-    for cls in unique_classes:
-        idx = np.where(np.argmax(y, axis=1) == cls)[0][0]  # Get first index of class
-        img = X[idx].reshape(28, 28)  # Reshape assuming 28x28 image
-
-        # Log each image separately to W&B
-        wandb.log({
-            f"Class {class_names[cls]}": wandb.Image(img, caption=class_names[cls])
-        }, step=0)
-
-def train(model, X_train, y_train, X_val, y_val, X_test, y_test, optimizer, epochs, batch_size):
-    global_step = 0
-
+def train(model, X_train, y_train, X_val, y_val, optimizer, epochs, batch_size, wandb_log=True):
     loss_fn = model.loss_fn.loss
     num_samples = X_train.shape[0]
     num_batches = num_samples // batch_size
 
     for epoch in tqdm(range(epochs), desc="Training Progress", unit="epoch"):
-        # Shuffle the training data at the beginning of each epoch
         indices = np.arange(num_samples)
         np.random.shuffle(indices)
         X_train = X_train[indices]
@@ -84,88 +62,66 @@ def train(model, X_train, y_train, X_val, y_val, X_test, y_test, optimizer, epoc
         train_loss = np.mean(train_loss)
         train_accuracy = np.mean(train_accuracy)
 
-        # Validation
         val_probs = model.forward(X_val)
         val_loss = loss_fn(y_val, val_probs)
         val_accuracy = np.mean(np.argmax(val_probs, axis=1) == np.argmax(y_val, axis=1))
 
-        # Test
-        test_probs = model.forward(X_test)
-        test_loss = loss_fn(y_test, test_probs)
-        test_accuracy = np.mean(np.argmax(test_probs, axis=1) == np.argmax(y_test, axis=1))
+        if wandb_log:
+            wandb.log({
+                "epoch": epoch + 1,
+                "loss": train_loss,
+                "accuracy": train_accuracy,
+                "val_loss": val_loss,
+                "val_accuracy": val_accuracy,
+            })
 
-        wandb.log({
-            "epoch": epoch + 1,
-            "loss": train_loss,
-            "accuracy": train_accuracy,
-            "val_loss": val_loss,
-            "val_accuracy": val_accuracy,
-            "test_loss": test_loss,
-            "test_accuracy": test_accuracy,
-            "train_confusion_matrix": wandb.plot.confusion_matrix(
-                title="Train Confusion Matrix",
-                probs=train_probs,
-                y_true=np.argmax(y_batch, axis=1),
-                class_names=class_labels
-            ),
-            "val_confusion_matrix": wandb.plot.confusion_matrix(
-                title="Validation Confusion Matrix",
-                probs=val_probs,
-                y_true=np.argmax(y_val, axis=1),
-                class_names=class_labels
-            ),
-            "test_confusion_matrix": wandb.plot.confusion_matrix(
-                title="Test Confusion Matrix",
-                probs=test_probs,
-                y_true=np.argmax(y_test, axis=1),
-                class_names=class_labels
-            )
-        }, step=global_step)
-        global_step += 1
+        tqdm.write(f"Epoch {epoch + 1}/{epochs} - Loss: {train_loss:.4f} - Accuracy: {train_accuracy:.4f} - Val Loss: {val_loss:.4f} - Val Accuracy: {val_accuracy:.4f}")
 
-        tqdm.write(f"Epoch {epoch + 1}/{epochs} - Loss: {train_loss:.4f} - Accuracy: {train_accuracy:.4f} - Val Loss: {val_loss:.4f} - Val Accuracy: {val_accuracy:.4f} - Test Loss: {test_loss:.4f} - Test Accuracy: {test_accuracy:.4f}")
-
-    wandb.config.update({
-        "final_weights": [w.tolist() for w in model.weights],  # Convert weights to lists for JSON serialization
-        "final_biases": [b.tolist() for b in model.biases]     # Convert biases to lists for JSON serialization
-    })
-
-def hparam_search(X_train, y_train, X_val, y_val, X_test, y_test):
+def hparam_search(X_train, y_train, X_val, y_val):
     wandb.init()
     config = wandb.config
     wandb.run.name = (
-        f"ep_{config['epochs']}_hl_{config['num_hidden_layers']}_hs_{config['hidden_layer_size']}_"
+        f"d_{config['dataset']}_ep_{config['epochs']}_hl_{config['num_hidden_layers']}_hs_{config['hidden_layer_size']}_"
         f"wd_{config['weight_decay']}_lr_{config['learning_rate']}_opt_{config['optimizer']}_"
         f"bs_{config['batch_size']}_wi_{config['weight_init']}_act_{config['activation']}_loss_{config['loss']}"
     )
 
     epochs = config["epochs"]
     batch_size = config["batch_size"]
-
     num_layers = config["num_hidden_layers"] + 1
     hidden_layer_size = config["hidden_layer_size"]
     layer_dims = [X_train.shape[1]] + [hidden_layer_size] * (num_layers - 1) + [10]
 
-    activation = config["activation"]  
-    weight_init = config["weight_init"]
-    loss = config["loss"]
-
-    nn = NeuralNetwork(num_layers=num_layers, 
-                       neurons_per_layer=layer_dims, 
-                       activation=activation, 
-                       loss=loss, 
-                       weight_init=weight_init)
-
-    optimizer = OptimizerFactory.get_optimizer(
-        config["optimizer"], nn, 
-        learning_rate=config["learning_rate"],
-        momentum=config.get("momentum", 0.9), 
-        beta1=config.get("beta1", 0.9), 
-        beta2=config.get("beta2", 0.999), 
-        epsilon=config.get("epsilon", 1e-8)
+    model = NeuralNetwork(
+        num_layers=num_layers, 
+        neurons_per_layer=layer_dims, 
+        activation=config["activation"], 
+        loss=config["loss"], 
+        weight_init=config["weight_init"],
+        weight_decay=config["weight_decay"],
+        batch_size=batch_size
     )
 
-    train(nn, X_train, y_train, X_val, y_val, X_test, y_test, optimizer, epochs, batch_size)
+    optimizer = OptimizerFactory.get_optimizer(
+        name=config["optimizer"], 
+        model=model, 
+        learning_rate=config["learning_rate"],
+        momentum=config["momentum"],
+        beta1=config["beta1"],
+        beta2=config["beta2"],
+        epsilon=config["epsilon"]
+    )
+
+    train(
+        model=model,
+        X_train=X_train,
+        y_train=y_train,
+        X_val=X_val,
+        y_val=y_val,
+        optimizer=optimizer,
+        epochs=epochs,
+        batch_size=batch_size
+    )
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Train a neural network with hyperparameter optimization using wandb.")
@@ -189,11 +145,9 @@ if __name__ == "__main__":
     parser.add_argument("-a", "--activation", default=None, choices=["identity", "sigmoid", "tanh", "ReLU"], help="Activation function to use")
     parser.add_argument("-c", "--count", type=int, default=25, help="Number of sweep runs")
 
-
     args = parser.parse_args()
 
     params = sweep_config["parameters"].keys()
-
     for param in params:
         value = getattr(args, param)
         if value:
@@ -207,12 +161,7 @@ if __name__ == "__main__":
         sweep_kwargs["project"] = args.wandb_project
     if args.wandb_entity:
         sweep_kwargs["entity"] = args.wandb_entity
-
-    wandb.init(**sweep_kwargs, name="class_samples_logging")
-    log_class_samples(X_train, y_train, args.dataset)
-    wandb.finish()
     
     sweep_id = wandb.sweep(sweep_config, **sweep_kwargs)
-
-    wandb.agent(sweep_id, function=lambda: hparam_search(X_train, y_train, X_val, y_val, X_test, y_test), count=args.count)
+    wandb.agent(sweep_id, function=lambda: hparam_search(X_train, y_train, X_val, y_val), count=args.count)
     wandb.finish()
