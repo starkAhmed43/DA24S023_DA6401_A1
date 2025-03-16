@@ -2,6 +2,14 @@
 
 This project implements a feedforward neural network to classify images from the Fashion-MNIST dataset or the MNIST dataset. The code is designed to be flexible, allowing easy changes to the number of hidden layers and the number of neurons in each hidden layer.
 
+# WANDB Report Link:
+
+https://wandb.ai/starkahmed43/DA24S023_DA6401_A1/reports/DA6401-Assignment-1--VmlldzoxMTgwMTI1OQ
+
+# GitHub Repo Link:
+
+https://github.com/starkAhmed43/DA24S023_DA6401_A1.git
+
 ## Project Structure
 
 ```
