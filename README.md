@@ -6,20 +6,27 @@ This project implements a feedforward neural network to classify images from the
 
 ```
 .gitignore
-A1.ipynb
-layer.py
+activations.py
+best_model.py
+dataloader.py
+losses.py
+mnist_sweep.py
 neural_network.py
-optimizer.py
+optimizers.py
+README.md
 requirements.txt
 train.py
 ```
 
 ## Files
 
-- `A1.ipynb`: Jupyter notebook that contains implementation of Q1 - Q3.
-- `layer.py`: Contains the implementation of a neural network layer.
+- `activations.py`: Contains activation functions used in the neural network.
+- `best_model.py`: Script to save and load the best-performing model.
+- `dataloader.py`: Handles loading and preprocessing of datasets.
+- `losses.py`: Contains loss functions used for training the neural network.
+- `mnist_sweep.py`: Sweeps MNIST across 3 hparam configs.
 - `neural_network.py`: Contains the implementation of the neural network.
-- `optimizer.py`: Contains various optimizer implementations.
+- `optimizers.py`: Contains various optimizer implementations.
 - `requirements.txt`: Lists the dependencies required for the project.
 - `train.py`: Contains the training loop for the neural network.
 
@@ -34,56 +41,9 @@ The following optimizers are implemented in [`optimizer.py`](optimizer.py):
 - `AdamOptimizer`: Adaptive Moment Estimation.
 - `NadamOptimizer`: Nesterov-accelerated Adaptive Moment Estimation.
 
-### Example Usage
-
-```python
-from neural_network import NeuralNetwork
-from optimizer import OptimizerFactory
-
-layers = np.random.randint(4, 10)
-neurons_in_input_layer = x_train[0].reshape(-1).shape[0]
-neurons_per_hidden_layer = [np.random.randint(3, 10) for _ in range(layers - 1)]
-neurons_in_output_layer = 10
-neurons_per_layer = [neurons_in_input_layer] + neurons_per_hidden_layer + [neurons_in_output_layer]
-
-activation_options = ["relu", "sigmoid", "tanh", "linear"]
-activations = [activation_options[np.random.randint(0, 4)] for _ in range(layers - 1)]
-activations.append("softmax")
-
-model = NeuralNetwork(layers, neurons_per_layer, activations)
-
-optimizer = OptimizerFactory.get_optimizer("adam", model, learning_rate=0.001, beta1=0.9, beta2=0.999, epsilon=1e-8)
-```
-
 ## Training
 
 The training function is defined in [`train.py`](train.py):
-
-```python
-def train(model, X_train, y_train, X_val, y_val, optimizer, epochs=1000):
-    for epoch in tqdm(range(epochs), desc="Training Progress", unit="epoch"):
-        train_probs = model.forward(X_train)
-        train_loss = cross_entropy_loss(train_probs, y_train)
-        train_accuracy = np.mean(np.argmax(train_probs, axis=1) == y_train)
-
-        grad_W, grad_b = model.backward(X_train, train_probs, y_train)
-        if isinstance(optimizer, opt.NAGOptimizer):
-            optimizer.update(X_train, y_train)
-        else:
-            optimizer.update(grad_W, grad_b)
-
-        val_probs = model.forward(X_val)
-        val_loss = cross_entropy_loss(val_probs, y_val)
-        val_accuracy = np.mean(np.argmax(val_probs, axis=1) == y_val)
-
-        wandb.log({
-            "epoch": epoch + 1,
-            "train_loss": train_loss,
-            "train_accuracy": train_accuracy,
-            "val_loss": val_loss,
-            "val_accuracy": val_accuracy
-        })
-```
 
 ## Arguments
 
