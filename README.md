@@ -4,7 +4,7 @@ This project implements a feedforward neural network to classify images from the
 
 # WANDB Report Link:
 
-https://wandb.ai/starkahmed43/DA24S023_DA6401_A1/reports/DA6401-Assignment-1--VmlldzoxMTgwMTI1OQ
+https://wandb.ai/starkahmed43/DA24S023_DA6401_A1/reports/DA6401-Assignment-1--VmlldzoxMTgwMTI1OQ?accessToken=hm58qeu7ccwrdbwzgjhhwbwt09i9mmcwq559a1q0pzgae1k58pdm29i5ohwkcz9z
 
 # GitHub Repo Link:
 
